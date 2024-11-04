@@ -4,8 +4,7 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 
 class Module:
-    """
-    Modules form a tree that store parameters and other
+    """Modules form a tree that store parameters and other
     submodules. They make up the basis of neural network stacks.
 
     Attributes:
@@ -25,17 +24,21 @@ class Module:
         self.training = True
 
     def modules(self) -> Sequence[Module]:
-        "Return the direct child modules of this module."
+        """Return the direct child modules of this module."""
         m: Dict[str, Module] = self.__dict__["_modules"]
         return list(m.values())
 
     def train(self) -> None:
-        "Set the mode of this module and all descendent modules to `train`."
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the mode of this module and all descendent modules to `train`."""
+        self.training = True
+        for module in self.modules():
+            module.train()
 
     def eval(self) -> None:
-        "Set the mode of this module and all descendent modules to `eval`."
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the mode of this module and all descendent modules to `eval`."""
+        self.training = False
+        for module in self.modules():
+            module.eval()
 
     def named_parameters(self) -> Sequence[Tuple[str, Parameter]]:
         """
@@ -45,11 +48,21 @@ class Module:
         Returns:
             The name and `Parameter` of each ancestor parameter.
         """
-        raise NotImplementedError("Need to include this file from past assignment.")
+        p: Dict[str, Parameter] = self.__dict__["_parameters"]
+        p = list(zip(p.keys(), p.values()))
+        for loc_name, module in self.__dict__["_modules"].items():
+            p_des = module.named_parameters()
+            for des_name, param in p_des:
+                p += [(f'{loc_name}.{des_name}', param)]
+        return p
 
     def parameters(self) -> Sequence[Parameter]:
-        "Enumerate over all the parameters of this module and its descendents."
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Enumerate over all the parameters of this module and its descendents."""
+        p: Dict[str, Parameter] = self.__dict__["_parameters"]
+        p = list(p.values())
+        for module in self.modules():
+            p += module.parameters()
+        return p
 
     def add_parameter(self, k: str, v: Any) -> Parameter:
         """
