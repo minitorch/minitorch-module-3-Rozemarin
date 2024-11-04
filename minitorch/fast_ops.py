@@ -279,39 +279,20 @@ def _tensor_matrix_multiply(
     b_shape: Shape,
     b_strides: Strides,
 ) -> None:
-    """
-    NUMBA tensor matrix multiply function.
 
-    Should work for any tensor shapes that broadcast as long as
-
-    ```
-    assert a_shape[-1] == b_shape[-2]
-    ```
-
-    Optimizations:
-
-    * Outer loop in parallel
-    * No index buffers or function calls
-    * Inner loop should have no global writes, 1 multiply.
-
-
-    Args:
-        out (Storage): storage for `out` tensor
-        out_shape (Shape): shape for `out` tensor
-        out_strides (Strides): strides for `out` tensor
-        a_storage (Storage): storage for `a` tensor
-        a_shape (Shape): shape for `a` tensor
-        a_strides (Strides): strides for `a` tensor
-        b_storage (Storage): storage for `b` tensor
-        b_shape (Shape): shape for `b` tensor
-        b_strides (Strides): strides for `b` tensor
-
-    Returns:
-        None : Fills in `out`
-    """
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
-    return
+    for batch in prange(max(a_shape[0], b_shape[0])):
+        for i in range(out_shape[-2]):
+            for j in range(out_shape[-1]):
+                result = 0.0
+                for k in range(a_shape[-1]):
+                    a_index = batch * a_batch_stride + i * a_strides[1] + k * a_strides[2]
+                    b_index = batch * b_batch_stride + k * b_strides[1] + j * b_strides[2]
+                    result += a_storage[a_index] * b_storage[b_index]
+
+                out_index = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
+                out[out_index] = result
 
 tensor_matrix_multiply = njit(parallel=True, fastmath=True)(_tensor_matrix_multiply)
